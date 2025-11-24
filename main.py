@@ -1,8 +1,10 @@
 import random
 import time
+from copy import deepcopy
 
 BOARD_WIDTH = 9
 BOARD_HEIGHT = 9
+POSSIBLE_NUMBER_SET = {str(i) for i in range(1, 10)}
 
 
 def remove_spaces(l):
@@ -79,36 +81,63 @@ def generate_board():
     return sudoku_board
 
 
-def find_all_possible_solutions(board, count=0):
-    for row_index, row in enumerate(board):
-        for col_index, cell in enumerate(row):
-            if cell == "":
-                print(f"FOUND EMPTY CELL: {row_index} {col_index}")
-                for number in range(1, 9):
-                    board[row_index][col_index] = str(number)
+def is_solvable(board):
+    while True:
+        found_a_cell = False
+        found_empty_cell = False
 
-                    # Check if the newly added number is valid there
-                    if is_valid(board):
-                        # Check if it is now a full board
-                        if not any("" in r for r in board):
-                            count += 1
+        # Check each row
+        for ri, row in enumerate(board):
+            set_row = set(row)
+            differences = POSSIBLE_NUMBER_SET - set_row
 
-                        if find_all_possible_solutions(board, count):
-                            return True
+            print("DIFF", differences)
+            if len(differences) == 1:  # There is only one possible option it could be, so we know what to fill it in as
+                board[ri][row.index("")] = list(differences)[0]
+                found_a_cell = True
 
-                    # Revert it
-                    board[row_index][col_index] = ""
+        # Check each column
+        columns = [
+            [r[c] for r in board] for c in range(BOARD_WIDTH)
+        ]
+        for ci, column in enumerate(columns):
+            col_set = set(column)
+            differences = POSSIBLE_NUMBER_SET - col_set
 
-                return False
+            if len(differences) == 1:  # There is only one possible option it could be, so we know what to fill it in as
+                board[column.index("")][ci] = list(differences)[0]
+                found_a_cell = True
 
-    print(count)
-    return True
+        if not found_a_cell:
+            print("falso")
+            return False
 
+
+def generate_playable(board, still_playable=True):
+    # Pick a random cell to delete
+    random_y, random_x = random.randint(0, len(board) - 1), random.randint(0, len(board) - 1)
+    print(random_y, random_x)
+
+    # Remove it
+    buffer = board[random_y][random_x]
+    board[random_y][random_x] = ""
+
+    display_board(board)
+
+    # Check it is still solvable
+    boardcopy = deepcopy(board)
+    if is_solvable(boardcopy):
+        return generate_playable(board, True)
+
+    else:
+        # If it is not solvable anymore, we put it back to what it was before and stop removing (return board, False (not playable))
+        board[random_y][random_x] = buffer
+        return board, False
 
 
 if __name__ == '__main__':
-    b = [['3', '1', '6', '', '', '5', '7', '2', '4'], ['2', '5', '7', '4', '3', '6', '1', '8', '9'], ['9', '8', '4', '1', '2', '7', '6', '5', '3'], ['7', '6', '8', '3', '5', '2', '4', '9', '1'], ['1', '2', '9', '7', '4', '8', '3', '6', '5'], ['4', '3', '5', '6', '1', '9', '2', '7', '8'], ['6', '9', '1', '5', '7', '4', '8', '3', '2'], ['8', '4', '2', '9', '6', '3', '5', '1', '7'], ['5', '7', '3', '2', '8', '1', '9', '4', '6']]
+    generated_board = generate_board()
+    display_board(generated_board)
 
-    find_all_possible_solutions(b)
-
-    # display_board(generate_board())
+    b, o = generate_playable(generated_board)
+    display_board(b)
